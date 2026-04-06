@@ -171,15 +171,4 @@ Express saves result to MongoDB
 React displays result + bar chart + doughnut chart
 ```
 
----
 
-## 🎓 Interview-Ready Explanation
-
-> "I built a MERN stack web app for automated arecanut quality grading.
-> The React frontend with Tailwind CSS lets farmers upload tray images.
-> The Express backend handles authentication using JWT tokens and
-> forwards images to a separate Python microservice that runs a fine-tuned
-> YOLOv8 model. The model detects each nut and classifies it as Grade A or
-> Grade B. Results are stored per-user in MongoDB and displayed with
-> Chart.js bar and doughnut charts. This microservices architecture keeps
-> the ML logic completely separated from the web server."
