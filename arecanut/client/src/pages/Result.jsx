@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
@@ -14,7 +13,7 @@ export default function Result() {
   useEffect(() => { if (!state) navigate('/dashboard'); }, [state, navigate]);
   if (!state) return null;
 
-  const { gradeA = 0, gradeB = 0, totalCount = 0, finalGrade, annotatedImage } = state;
+  const { gradeA = 0, gradeB = 0, totalCount = 0, finalGrade, annotatedImage, isBase64 } = state;
 
   const pctA = totalCount > 0 ? Math.round((gradeA / totalCount) * 100) : 0;
   const pctB = totalCount > 0 ? Math.round((gradeB / totalCount) * 100) : 0;
@@ -24,8 +23,11 @@ export default function Result() {
   const badge  = isInv ? 'bg-red-50 border-red-200 text-red-700' : isA ? 'bg-forest-50 border-forest-200 text-forest-700' : 'bg-amber-50 border-amber-200 text-amber-700';
 
   // Use relative URL — Vite proxies /uploads to http://localhost:5000/uploads
+  // Production returns base64, local returns filename
   const imgUrl = annotatedImage
-    ? `/uploads/${annotatedImage}`
+    ? isBase64
+      ? `data:image/jpeg;base64,${annotatedImage}`
+      : `/uploads/${annotatedImage}`
     : null;
 
   return (

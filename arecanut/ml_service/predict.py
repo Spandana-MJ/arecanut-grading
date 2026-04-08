@@ -1,9 +1,10 @@
 """
 ML Microservice - predict.py
-Runs as Flask API - called by Node.js server
+Returns annotated image as base64 string so Node server doesn't need file access
 """
 import os
 import sys
+import base64
 
 print("Starting ML service...")
 
@@ -23,6 +24,7 @@ except ImportError:
 
 try:
     import cv2
+    import numpy as np
     print("OK OpenCV loaded")
 except ImportError:
     print("ERROR: pip install opencv-python-headless")
@@ -41,9 +43,7 @@ print("Loading YOLO model...")
 model = YOLO(MODEL_PATH)
 print("YOLO model loaded!")
 
-SAVE_DIR = os.path.join(BASE_DIR, "annotated")
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
-os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 
@@ -65,13 +65,20 @@ def predict():
     file.save(temp_path)
 
     try:
+        # Run YOLO prediction
         results = model.predict(source=temp_path, save=False, verbose=False)
 
-        annotated_img      = results[0].plot()
-        annotated_filename = f"annotated_{file.filename}"
-        annotated_path     = os.path.join(SAVE_DIR, annotated_filename)
-        cv2.imwrite(annotated_path, annotated_img[..., ::-1])
+        # Get annotated image as numpy array (RGB)
+        annotated_img = results[0].plot()
 
+        # Convert RGB → BGR for OpenCV encoding
+        annotated_bgr = annotated_img[..., ::-1]
+
+        # Encode image to JPEG bytes then base64
+        _, buffer = cv2.imencode('.jpg', annotated_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        img_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        # Count grades
         boxes   = results[0].boxes
         grade_a = 0
         grade_b = 0
@@ -91,14 +98,17 @@ def predict():
             final_grade = "Grade B"
 
         return jsonify({
-            "grade_a":         grade_a,
-            "grade_b":         grade_b,
-            "total":           total,
-            "final_grade":     final_grade,
-            "annotated_image": annotated_filename,
+            "grade_a":          grade_a,
+            "grade_b":          grade_b,
+            "total":            total,
+            "final_grade":      final_grade,
+            "annotated_image":  img_base64,   # base64 string
+            "image_type":       "base64",
         }), 200
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
     finally:
@@ -107,7 +117,6 @@ def predict():
 
 
 if __name__ == "__main__":
-    # Render provides PORT env variable
     port = int(os.environ.get("PORT", 5001))
     print(f"ML Service starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
